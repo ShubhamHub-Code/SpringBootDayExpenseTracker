@@ -1,8 +1,6 @@
 package com.fullstack.advice;
 
-import com.fullstack.exception.EmailAlreadyExistsException;
-import com.fullstack.exception.InvalidCredentialsException;
-import com.fullstack.exception.UserNotFoundException;
+import com.fullstack.exception.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -44,5 +42,18 @@ public class GlobalExceptionHandler {
     @ExceptionHandler
     public ResponseEntity<?> handleInvalidCredentialsException(InvalidCredentialsException invalidCredentialsException) {
         return new ResponseEntity<>(invalidCredentialsException.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    //InvalidRequestException
+    @ExceptionHandler
+    public ResponseEntity<?> handleInvalidRequestException(InvalidRequestException invalidRequestException) {
+        return new ResponseEntity<>(invalidRequestException.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    //ResourceNotFoundException
+
+    @ExceptionHandler
+    public ResponseEntity<?> handleResourceNotFoundException(ResourceNotFoundException resourceNotFoundException) {
+        return new ResponseEntity<>(resourceNotFoundException.getMessage(), HttpStatus.BAD_REQUEST);
     }
 }

@@ -1,8 +1,6 @@
 package com.fullstack.service.impl;
 
-import com.fullstack.dto.LogInRequest;
-import com.fullstack.dto.LogInResponse;
-import com.fullstack.dto.UserRequestDto;
+import com.fullstack.dto.*;
 import com.fullstack.entity.Users;
 import com.fullstack.exception.EmailAlreadyExistsException;
 import com.fullstack.exception.UserNotFoundException;
@@ -10,6 +8,7 @@ import com.fullstack.repository.UserRepository;
 import com.fullstack.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -22,19 +21,29 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
 
+    @Transactional
     @Override
-    public Users registerUser(UserRequestDto request) {
+    public UserResponse registerUser(UserRequest request) {
 
-        if (userRepository.existsByEmail(request.getEmail())) {
+
+        if (userRepository.findByEmail(request.getEmail()) != null) {
             throw new EmailAlreadyExistsException("Email already registered");
         }
 
-        Users users = new Users();
-        users.setName(request.getName());
-        users.setEmail(request.getEmail());
-        // users.setPassword(passwordEncoder.encode(request.getPassword()));
-        users.setPassword(request.getPassword());
-        return userRepository.save(users);
+        Users user = new Users();
+        user.setName(request.getName());
+        user.setEmail(request.getEmail());
+        user.setPassword(request.getPassword());
+
+        Users saved = userRepository.save(user);
+
+        UserResponse response = new UserResponse();
+        response.setId(saved.getId());
+        response.setName(saved.getName());
+        response.setEmail(saved.getEmail());
+        response.setMessage("User registered successfully");
+
+        return response;
     }
 
     @Override

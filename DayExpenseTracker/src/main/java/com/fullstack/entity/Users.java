@@ -19,13 +19,9 @@ public class Users {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Size(min = 2, message = "Customer Name should be 2 character ")
     private String name;
 
-    @Column(nullable = false, unique = true)
-    @Email
     private String email;
 
-    @Pattern(regexp = "^(?=.*[!@#$%^&*(),.?\\\":{}|<>]).{5,}$", message = "Password must be at least 5 characters long and contain at least one special character")
     private String password;
 }

@@ -1,8 +1,6 @@
 package com.fullstack.service;
 
-import com.fullstack.dto.LogInRequest;
-import com.fullstack.dto.LogInResponse;
-import com.fullstack.dto.UserRequestDto;
+import com.fullstack.dto.*;
 import com.fullstack.entity.Users;
 import org.apache.catalina.User;
 
@@ -11,7 +9,7 @@ import java.util.Optional;
 
 
 public interface UserService {
-    Users registerUser(UserRequestDto request);
+    UserResponse registerUser(UserRequest request);
 
     LogInResponse signin(LogInRequest logInRequest);
 

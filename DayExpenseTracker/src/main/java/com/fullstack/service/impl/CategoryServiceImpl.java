@@ -10,6 +10,7 @@ import com.fullstack.repository.UserRepository;
 import com.fullstack.service.CategoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -23,6 +24,7 @@ public class CategoryServiceImpl implements CategoryService {
     private final UserRepository userRepository;
 
 
+    @Transactional
     @Override
     public CategoryResponse crateCategory(CategoryRequest categoryRequest) {
 
@@ -53,11 +55,12 @@ public class CategoryServiceImpl implements CategoryService {
     public List<CategoryResponse> getUserCategory(long userID) {
         return categoryRepository.findAll()
                 .stream()
-                .filter(c -> c.getUsers().getId().equals(userID))
+                .filter(c -> c.getUsers() != null && c.getUsers().getId().equals(userID))
                 .map(c -> CategoryResponse.builder()
                         .id(c.getId())
                         .name(c.getName())
                         .description(c.getDescription())
+                        .userID(c.getUsers().getId())
                         .build())
                 .collect(Collectors.toList());
     }
