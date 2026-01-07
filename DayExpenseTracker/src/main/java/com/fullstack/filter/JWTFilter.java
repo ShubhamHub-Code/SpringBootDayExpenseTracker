@@ -1,4 +1,4 @@
-/*
+
 package com.fullstack.filter;
 
 import com.fullstack.util.JWTUtil;
@@ -77,4 +77,4 @@ public class JWTFilter extends OncePerRequestFilter {
         }
         filterChain.doFilter(request, response);
     }
-}*/
+}

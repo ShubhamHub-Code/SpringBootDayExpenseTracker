@@ -19,5 +19,7 @@ public class ExpenseResponse {
 
     private String categoryName;
 
+    private String massage;
+
     private Date date;
 }

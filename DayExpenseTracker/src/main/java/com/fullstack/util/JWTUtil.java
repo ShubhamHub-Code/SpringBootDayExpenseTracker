@@ -1,4 +1,4 @@
-/*
+
 package com.fullstack.util;
 
 import io.jsonwebtoken.Claims;
@@ -74,9 +74,13 @@ public class JWTUtil {
                 .compact();
     }
 
+    public String extractRole(String token) {
+        return (String) extractAllClaims(token).get("role");
+    }
+
     //validating token
     public Boolean validateToken(String token, UserDetails userDetails) {
         final String userEmail = extractUsername(token);
         return (userEmail.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
-}*/
+}

@@ -2,11 +2,14 @@ package com.fullstack.service.impl;
 
 import com.fullstack.dto.*;
 import com.fullstack.entity.Users;
+import com.fullstack.enums.Role;
 import com.fullstack.exception.EmailAlreadyExistsException;
 import com.fullstack.exception.UserNotFoundException;
 import com.fullstack.repository.UserRepository;
 import com.fullstack.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,11 +18,15 @@ import java.util.Optional;
 
 
 @Service
-@RequiredArgsConstructor
+
 public class UserServiceImpl implements UserService {
 
 
-    private final UserRepository userRepository;
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Transactional
     @Override
@@ -35,6 +42,7 @@ public class UserServiceImpl implements UserService {
         user.setEmail(request.getEmail());
         user.setPassword(request.getPassword());
 
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
         Users saved = userRepository.save(user);
 
         UserResponse response = new UserResponse();
@@ -60,7 +68,7 @@ public class UserServiceImpl implements UserService {
             logInResponse.setUserEmail(users.getEmail());
             logInResponse.setUserName(users.getName());
             logInResponse.setUserID(users.getId());
-            logInResponse.setMessage(users.getEmail()+" login successfully");
+            logInResponse.setMessage(users.getEmail() + " login successfully");
 
         }
         return logInResponse;
@@ -77,19 +85,29 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Users Update(long userID, Users users) {
+    public Users Update(long userID, UserRequest request) {
+        Users existingUser = userRepository.findById(userID).orElseThrow(()->new UserNotFoundException("USER NOT FOUND"));
 
-        Users users1 = userRepository.findById(userID).orElseThrow(() -> new UserNotFoundException("User #ID not found"));
-        users1.setName(users.getName());
-        users1.setEmail(users.getEmail());
-        users1.setPassword(users.getPassword());
+        // Update only non-null fields from DTO
+        if (request.getName() != null){
+            existingUser.setName(request.getName());
+        }
+        if (request.getEmail() != null){
+            existingUser.setEmail(request.getEmail());
+        }
+        if (request.getPassword() != null){
+            existingUser.setPassword(request.getPassword());
+        }
 
-        return userRepository.save(users1);
+        return userRepository.save(existingUser);
     }
 
+
     @Override
-    public void deleteUserByID(long userID) {
-        userRepository.deleteById(userID);
+    public void deleteCurrentUser(long userID) {
+        Users existingUser = userRepository.findById(userID).orElseThrow(()->new UserNotFoundException("USER NOT FOUND"));
+
+        userRepository.delete(existingUser);
     }
 
     @Override

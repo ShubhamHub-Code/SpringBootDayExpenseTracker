@@ -51,9 +51,20 @@ public class GlobalExceptionHandler {
     }
 
     //ResourceNotFoundException
-
     @ExceptionHandler
     public ResponseEntity<?> handleResourceNotFoundException(ResourceNotFoundException resourceNotFoundException) {
         return new ResponseEntity<>(resourceNotFoundException.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    //ResourceAlreadyExistsException
+    @ExceptionHandler
+    public ResponseEntity<?> handleResourceAlreadyExistsException(ResourceAlreadyExistsException resourceAlreadyExistsException) {
+        return new ResponseEntity<>(resourceAlreadyExistsException.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    //UnauthorizedActionException
+    @ExceptionHandler
+    public ResponseEntity<?> handleUnauthorizedActionException(UnauthorizedActionException unauthorizedActionException) {
+        return new ResponseEntity<>(unauthorizedActionException.getMessage(), HttpStatus.FORBIDDEN);
     }
 }

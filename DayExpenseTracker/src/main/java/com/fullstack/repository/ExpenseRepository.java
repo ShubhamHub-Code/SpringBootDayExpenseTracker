@@ -66,5 +66,5 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
        """)
     List<CategorySpendingResponse> getCategorySpendingForMonth(Long userId, int year, int month);
 
-
+    void deleteByUser_Id(Long userId);
 }

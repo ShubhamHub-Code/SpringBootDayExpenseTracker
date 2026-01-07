@@ -1,10 +1,8 @@
-/*
 package com.fullstack.config;
 
 
 import com.fullstack.filter.JWTFilter;
 import com.fullstack.service.impl.CustomUserDetailsService;
-import com.fullstack.service.impl.UserServiceImpl;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -15,6 +13,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.BeanIds;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -27,8 +26,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
+
 
     private final JWTFilter jwtFilter;
 
@@ -44,6 +45,7 @@ public class SecurityConfig {
     @Primary
     public UserDetailsService userDetailsService() {
         // UserDetails userDetails = User.builder().username("Admin").password(passwordEncoder().encode("Admin")).roles("ADMIN").build();
+
         return new CustomUserDetailsService();
 
     }
@@ -62,35 +64,35 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
-        httpSecurity
-                .authorizeHttpRequests(authReq ->
-                        authReq
-                                .requestMatchers(
-                                        "/api/users",
-                                        "/api/users/**",
-                                        "/v3/api-docs",
-                                        "/v3/api-docs/**",
-                                        "/swagger-ui/**",
-                                        "/swagger-ui.html"
-                                )
-                                .permitAll()
-                                .anyRequest()
-                                .authenticated()
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf(AbstractHttpConfigurer::disable)
+
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                "/v3/api-docs", "/v3/api-docs/**",
+                                "/swagger-ui/**", "/swagger-ui.html",
+
+                                // user public APIs
+                                "/api/users/registerUser",
+                                "/api/users/loginUser"
+                        ).permitAll()
+                        .anyRequest().authenticated()
                 )
-                .exceptionHandling(exception ->
-                        exception.authenticationEntryPoint(
-                                (req, res, ex) -> res.sendError(HttpServletResponse.SC_UNAUTHORIZED)
+
+                .exceptionHandling(ex ->
+                        ex.authenticationEntryPoint(
+                                (req, res, e) -> res.sendError(HttpServletResponse.SC_UNAUTHORIZED)
                         )
                 )
+
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 );
 
+        http.authenticationProvider(daoAuthenticationProvider());
+        http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
-        httpSecurity.authenticationProvider(daoAuthenticationProvider());
-        httpSecurity.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-        return httpSecurity.build();
-
+        return http.build();
     }
-}*/
+}

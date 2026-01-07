@@ -9,5 +9,4 @@ public class CategoryRequest {
 
     private String description;
 
-    private long userID;
 }

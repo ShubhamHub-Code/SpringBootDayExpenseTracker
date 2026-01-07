@@ -22,4 +22,5 @@ public class UserRequest {
             message = "Password must be at least 5 characters long and contain at least one special character"
     )
     private String password;
+
 }

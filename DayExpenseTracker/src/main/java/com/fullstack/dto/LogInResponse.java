@@ -17,4 +17,5 @@ public class LogInResponse {
 
     private String message;
 
+    private String token;
 }

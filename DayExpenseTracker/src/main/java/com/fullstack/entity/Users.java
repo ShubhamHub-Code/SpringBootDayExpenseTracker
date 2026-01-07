@@ -1,5 +1,6 @@
 package com.fullstack.entity;
 
+import com.fullstack.enums.Role;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Pattern;
@@ -24,4 +25,7 @@ public class Users {
     private String email;
 
     private String password;
+
+    @Enumerated(EnumType.STRING)     // ⭐ store as "USER" or "ADMIN"
+    private Role role;
 }

@@ -1,7 +1,6 @@
 package com.fullstack.service;
 
 import com.fullstack.dto.*;
-import org.springframework.data.domain.Page;
 
 import java.util.List;
 
@@ -9,21 +8,25 @@ public interface IExpenseService {
 
     ExpenseResponse addExpense(ExpenseRequest expenseRequest);
 
-    Page<ExpenseResponse> viewAllExpense(int page , int size, String sortBy);
+    List<ExpenseResponse> addExpenses(List<ExpenseRequest> expenseRequests);
 
-    Page<ExpenseResponse> viewAllUserExpense(Long userId, int page, int size,String sortBy);
+    PaginatedExpenseResponse viewAllExpense(int page, int size, String sortBy);
 
-    ExpenseResponse updateExpense(long expenseID, ExpenseRequest expenseRequest);
+    public PaginatedExpenseResponse viewAllUserExpense(int page, int size, String sortBy);
+
+    ExpenseResponse updateExpense(long expenseId, ExpenseUpdateRequest expenseRequest);
 
     void deleteExpense(long expenseID);
 
     void deleteAll();
 
-    Double getMonthlyTotal(Long userId, int year, int month);
+    void deleteAllAdmin(long userId);
 
-    List<CategorySpendingResponse> getCategoryWiseSpending(Long userId);
+    Double getMonthlyTotal(int year, int month);
 
-    List<MonthlyExpenseTrend> getMonthlyTrend(Long userId);
+    List<CategorySpendingResponse> getCategoryWiseSpending();
 
-    List<MonthlyTrendReport> getMonthlyTrendReport(Long userId, boolean includeCategory);
+    List<MonthlyExpenseTrend> getMonthlyTrend();
+
+    List<MonthlyTrendReport> getMonthlyTrendReport(boolean includeCategory);
 }

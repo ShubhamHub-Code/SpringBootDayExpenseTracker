@@ -6,6 +6,7 @@ import com.fullstack.entity.Expense;
 import com.fullstack.entity.Users;
 import com.fullstack.exception.InvalidRequestException;
 import com.fullstack.exception.ResourceNotFoundException;
+import com.fullstack.exception.UnauthorizedActionException;
 import com.fullstack.exception.UserNotFoundException;
 import com.fullstack.repository.CategoryRepository;
 import com.fullstack.repository.ExpenseRepository;
@@ -33,6 +34,8 @@ public class ExpenseServiceImpl implements IExpenseService {
 
     private final UserRepository userRepository;
 
+    private final CategoryServiceImpl categoryService;
+
     @Transactional
     @Override
     public ExpenseResponse addExpense(ExpenseRequest expenseRequest) {
@@ -59,76 +62,172 @@ public class ExpenseServiceImpl implements IExpenseService {
 
         expense.setCategory(category);
 
-        Users user = userRepository.findById(expenseRequest.getUserId())
+        Long userId = categoryService.getLoggedInUserId();
+        Users user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        if (user == null) {
+            throw new UserNotFoundException("User not found");
+        }
+
         expense.setUser(user);
 
-
-        Expense expense1 = expenseRepository.save(expense);
+        Expense saved = expenseRepository.save(expense);
 
         ExpenseResponse expenseResponse = new ExpenseResponse();
-
-        expenseResponse.setExpenseID(expense1.getExpenseID());
-        expenseResponse.setTitle(expense1.getExpenseTitle());
-        expenseResponse.setAmount(expense1.getExpenseAmount());
+        expenseResponse.setExpenseID(saved.getExpenseID());
+        expenseResponse.setTitle(saved.getExpenseTitle());
+        expenseResponse.setAmount(saved.getExpenseAmount());
         expenseResponse.setCategoryName(category.getName());
-        expenseResponse.setDate(java.sql.Date.valueOf(expense1.getExpenseDate()));
+        expenseResponse.setDate(java.sql.Date.valueOf(saved.getExpenseDate()));
 
         return expenseResponse;
     }
 
+    @Transactional
     @Override
-    public Page<ExpenseResponse> viewAllExpense(int page, int size, String sortBy) {
+    public List<ExpenseResponse> addExpenses( List<ExpenseRequest> expenseRequests) {
+
+        if (expenseRequests == null || expenseRequests.isEmpty()) {
+            throw new InvalidRequestException("Request list is empty or null");
+        }
+
+        List<Expense> expensesToSave = new ArrayList<>();
+        List<ExpenseResponse> responses = new ArrayList<>();
+
+
+        for (ExpenseRequest request : expenseRequests) {
+
+            if (request == null) {
+                throw new InvalidRequestException("Request is null");
+            }
+            if (request.getTitle() == null) {
+                throw new InvalidRequestException("Title not present in request");
+            }
+            if (request.getAmount() <= 0) {
+                throw new InvalidRequestException("Amount is negative or zero");
+            }
+
+            Expense expense = new Expense();
+            expense.setExpenseTitle(request.getTitle());
+            expense.setExpenseAmount(request.getAmount());
+            expense.setExpenseDate(LocalDate.now());
+
+            Category category = categoryRepository.findByName(request.getCategoryName())
+                    .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
+            expense.setCategory(category);
+
+            Long userId = categoryService.getLoggedInUserId();
+            Users user = userRepository.findById(userId)
+                    .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+            if (user == null) {
+                throw new UserNotFoundException("User not found");
+            }
+
+            expense.setUser(user);
+
+            expensesToSave.add(expense);
+        }
+
+        List<Expense> savedExpenses = expenseRepository.saveAll(expensesToSave);
+
+        for (Expense expense : savedExpenses) {
+            ExpenseResponse response = new ExpenseResponse();
+            response.setExpenseID(expense.getExpenseID());
+            response.setTitle(expense.getExpenseTitle());
+            response.setAmount(expense.getExpenseAmount());
+            response.setCategoryName(expense.getCategory().getName());
+            response.setDate(java.sql.Date.valueOf(expense.getExpenseDate()));
+            responses.add(response);
+        }
+
+        return responses;
+    }
+
+
+    @Override
+    public PaginatedExpenseResponse viewAllExpense(int page, int size, String sortBy) {
+
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy));
-        return expenseRepository.findAll(pageable).map(this::convertToResponse);
+
+        Page<ExpenseResponse> expensePage =
+                expenseRepository.findAll(pageable)
+                        .map(this::convertToResponse);
+
+        PaginatedExpenseResponse response = new PaginatedExpenseResponse();
+        response.setCurrentPage(expensePage.getNumber() + 1);
+        response.setPageSize(expensePage.getSize());
+        response.setTotalElements(expensePage.getTotalElements());
+        response.setTotalPages(expensePage.getTotalPages());
+        response.setExpenses(expensePage.getContent());
+
+        response.setHasNext(expensePage.hasNext());
+        response.setHasPrevious(expensePage.hasPrevious());
+
+        return response;
     }
 
     @Override
-    public Page<ExpenseResponse> viewAllUserExpense(Long userId, int page, int size, String sortBy) {
+    public PaginatedExpenseResponse viewAllUserExpense(int page, int size, String sortBy) {
+
+        Long userId = categoryService.getLoggedInUserId();
+        Users user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy).descending());
 
-        return expenseRepository.findByUser_Id(userId, pageable)
-                .map(this::convertToResponse);
+        Page<ExpenseResponse> expensePage =
+                expenseRepository.findByUser_Id(user.getId(), pageable)
+                        .map(this::convertToResponse);
+
+        PaginatedExpenseResponse response = new PaginatedExpenseResponse();
+        response.setCurrentPage(expensePage.getNumber() + 1);
+        response.setPageSize(expensePage.getSize());
+        response.setTotalElements(expensePage.getTotalElements());
+        response.setTotalPages(expensePage.getTotalPages());
+        response.setExpenses(expensePage.getContent());
+
+        response.setHasNext(expensePage.hasNext());
+        response.setHasPrevious(expensePage.hasPrevious());
+
+        return response;
     }
 
     @Override
-    public ExpenseResponse updateExpense(long expenseID, ExpenseRequest expenseRequest) {
+    public ExpenseResponse updateExpense(long expenseId, ExpenseUpdateRequest expenseRequest) {
 
         if (expenseRequest == null) {
             throw new InvalidRequestException("Request is null");
         }
 
-        if (expenseRequest.getTitle() == null) {
-            throw new InvalidRequestException("Title Not present In Request");
-        }
+        long userId = categoryService.getLoggedInUserId();
+        Users user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
 
-        if (expenseRequest.getAmount() <= 0) {
-            throw new InvalidRequestException("Amount is negative or zero");
-        }
-
-        Expense expense = expenseRepository.findById(expenseID)
+        Expense expense = expenseRepository.findById(expenseId)
                 .orElseThrow(() -> new ResourceNotFoundException("Expense not found"));
+
+        if (!expense.getUser().getId().equals(user.getId())) {
+            throw new UnauthorizedActionException("You cannot update another user's expense");
+        }
 
         expense.setExpenseTitle(expenseRequest.getTitle());
         expense.setExpenseAmount(expenseRequest.getAmount());
-        expense.setExpenseDate(LocalDate.now());
+        expense.setExpenseDate(expenseRequest.getDate());
 
 
         Category category = categoryRepository.findByName(expenseRequest.getCategoryName()).orElseThrow(() -> new ResourceNotFoundException("Category not found"));
         expense.setCategory(category);
 
-        Users user = userRepository.findById(expenseRequest.getUserId()).orElseThrow(() -> new UserNotFoundException("User not found"));
-        expense.setUser(user);
-
         Expense saved = expenseRepository.save(expense);
-
-
         ExpenseResponse response = new ExpenseResponse();
         response.setExpenseID(saved.getExpenseID());
         response.setTitle(saved.getExpenseTitle());
         response.setAmount(saved.getExpenseAmount());
         response.setCategoryName(category.getName());
         response.setDate(java.sql.Date.valueOf(saved.getExpenseDate()));
+        response.setMassage("Expense updated successfully");
 
         return response;
 
@@ -136,34 +235,73 @@ public class ExpenseServiceImpl implements IExpenseService {
 
     @Override
     public void deleteExpense(long expenseID) {
-        expenseRepository.deleteById(expenseID);
+
+        long userId = categoryService.getLoggedInUserId();
+        Expense expense = expenseRepository.findById(expenseID).orElseThrow(()->new ResourceNotFoundException("Category Not Found"));
+
+        if (!expense.getUser().getId().equals(userId)) {
+            throw new UnauthorizedActionException("You cannot delete this expense");
+        }else{
+            expenseRepository.deleteById(expenseID);
+        }
     }
 
     @Override
     public void deleteAll() {
-        expenseRepository.deleteAll();
+        long userId = categoryService.getLoggedInUserId();
+        expenseRepository.deleteById(userId);
     }
 
-    public Double getMonthlyTotal(Long userId, int year, int month) {
+    @Override
+    public void deleteAllAdmin(long userId) {
+        expenseRepository.deleteById(userId);
+    }
+
+    @Override
+    public Double getMonthlyTotal(int year, int month) {
+
+        long userId = categoryService.getLoggedInUserId();
+        Users user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         LocalDate start = LocalDate.of(year, month, 1);
         LocalDate end = start.withDayOfMonth(start.lengthOfMonth());
 
-        return expenseRepository.getTotalExpenseForMonth(userId, start, end);
+        return expenseRepository.getTotalExpenseForMonth(user.getId(), start, end);
     }
 
-    public List<CategorySpendingResponse> getCategoryWiseSpending(Long userId) {
-        return expenseRepository.getCategoryWiseSpending(userId);
+    @Override
+    public List<CategorySpendingResponse> getCategoryWiseSpending() {
+
+        long userId = categoryService.getLoggedInUserId();
+        Users user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+
+        if (user == null) {
+            throw new UserNotFoundException("User not found");
+        }
+
+        return expenseRepository.getCategoryWiseSpending(user.getId());
     }
 
 
-    public List<MonthlyExpenseTrend> getMonthlyTrend(Long userId) {
+    public List<MonthlyExpenseTrend> getMonthlyTrend() {
+        long userId = categoryService.getLoggedInUserId();
+        Users user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
         return expenseRepository.getMonthlyTrend(userId);
     }
 
-    public List<MonthlyTrendReport> getMonthlyTrendReport(Long userId, boolean includeCategory) {
+    @Override
+    public List<MonthlyTrendReport> getMonthlyTrendReport(boolean includeCategory) {
 
-        List<MonthlyExpenseTrend> monthlyTrends = expenseRepository.getMonthlyTrend(userId);
+        long userId = categoryService.getLoggedInUserId();
+        Users user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        List<MonthlyExpenseTrend> monthlyTrends = expenseRepository.getMonthlyTrend(user.getId());
         List<MonthlyTrendReport> reports = new ArrayList<>();
 
         for (MonthlyExpenseTrend trend : monthlyTrends) {
@@ -171,7 +309,7 @@ public class ExpenseServiceImpl implements IExpenseService {
 
             if (includeCategory) {
                 categorySpending = expenseRepository.getCategorySpendingForMonth(
-                        userId, trend.getYear(), trend.getMonth()
+                        user.getId(), trend.getYear(), trend.getMonth()
                 );
             }
 

@@ -5,7 +5,9 @@ import com.fullstack.dto.CategoryResponse;
 import com.fullstack.entity.Category;
 import com.fullstack.service.CategoryService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -18,6 +20,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/categories")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "Bearer Auth")
 public class CategoryController {
 
     private final CategoryService categoryService;
@@ -32,12 +35,21 @@ public class CategoryController {
     }
 
     @Operation(
+            summary = "Create a new category",
+            description = "Adds a new expense category for the logged-in user."
+    )
+    @PostMapping("/createCategories")
+    public ResponseEntity<List<CategoryResponse>> createCategories(@Valid @RequestBody List<CategoryRequest> categoryRequest) {
+        return new ResponseEntity<>(categoryService.crateCategories(categoryRequest), HttpStatus.CREATED);
+    }
+
+    @Operation(
             summary = "Get categories for a user",
             description = "Returns all categories created by a specific user."
     )
-    @GetMapping("/getUserCategory/{userId}")
-    public ResponseEntity<List<CategoryResponse>> getUserCategory(@PathVariable long userId) {
-        return new ResponseEntity<>(categoryService.getUserCategory(userId), HttpStatus.OK);
+    @GetMapping("/getUserCategory")
+    public ResponseEntity<List<CategoryResponse>> getUserCategory() {
+        return new ResponseEntity<>(categoryService.getUserCategory(), HttpStatus.OK);
     }
 
     @Operation(
