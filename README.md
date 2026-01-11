@@ -17,21 +17,21 @@ a financial application — from authentication to database migrations and clean
 - CI/CD | Jenkins | GitHub | Tomcat  
 - Performance optimization & clean architecture  
 
-📧 Email: _add here_  
-🔗 LinkedIn: _add here_  
-🐙 GitHub: https://github.com/your-username  
+📧 Email: shubhammankar0401@gmail.com  
+🔗 LinkedIn: www.linkedin.com/in/shubham-mankar-7a2b41201  
+🐙 GitHub: https://github.com/ShubhamHub-Code
 
 ---
 
 ## ✨ Key Features
 
-- 🔐 JWT Authentication & Role-based Security  
-- 💸 Manage daily expenses with categories  
-- 📊 Category-wise & date-wise tracking  
+- User registration & JWT-based authentication
+- Secure role-based access  
+- Manage income & expenses
 - 🧰 Clean layered architecture (Controller → Service → Repository)  
 - ⚠ Centralized exception handling  
-- 🗄 Version-controlled DB schema using Flyway  
-- 📝 Validation on all request payloads  
+- Pagination & filtering APIs
+- Logging & structured architecture
 - 🔍 Logging & monitoring ready (Actuator)
 
 ---
@@ -40,10 +40,9 @@ a financial application — from authentication to database migrations and clean
 
 | Category | Tools |
 |----------|-------|
-Backend | Spring Boot 3, Java 17  
+Backend | Spring Boot 4, Java 25  
 Persistence | Spring Data JPA, Hibernate  
-Database | PostgreSQL  
-Migrations | Flyway  
+Database | PostgreSQL   
 Security | Spring Security (JWT)  
 Build | Maven  
 Utilities | Lombok, Validation API  
@@ -72,7 +71,7 @@ Designed for **maintainability, testability, and scalability**.
 ### 1️⃣ Clone repository
 
 ```bash
-git clone <repo-url>
+git clonegit clone https://github.com/ShubhamHub-Code/SpringBootDayExpenseTracker.git
 cd expense-tracker
 ```
 
@@ -112,12 +111,7 @@ http://localhost:8080/api/health
 
 - ✔ JWT authentication + refresh tokens  
 - ✔ Expense & Category CRUD APIs  
-- ⏳ Monthly reports and charts  
-- ⏳ Budget alerts  
-- ⏳ Export to Excel/PDF  
-- ⏳ Email notifications  
-- ⏳ JUnit + Mockito test coverage  
-- ⏳ Docker support  
+- ⏳ Monthly reports and charts   
 
 ---
 
