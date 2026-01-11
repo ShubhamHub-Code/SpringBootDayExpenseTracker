@@ -30,7 +30,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-
     private final JWTFilter jwtFilter;
 
     private final CustomUserDetailsService customUserDetailsService;
@@ -69,14 +68,24 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
 
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/v3/api-docs", "/v3/api-docs/**",
-                                "/swagger-ui/**", "/swagger-ui.html",
 
-                                // user public APIs
-                                "/api/users/registerUser",
-                                "/api/users/loginUser"
+                        // Swagger
+                        .requestMatchers(
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**"
                         ).permitAll()
+
+                        // Public user APIs
+                        .requestMatchers(
+                                "/api/users/register",
+                                "/api/users/login"
+                        ).permitAll()
+
+                        // 🔐 Admin APIs
+                        .requestMatchers("/api/admin/**")
+                        .hasRole("ADMIN")
+
+                        // 🔐 All other APIs need authentication
                         .anyRequest().authenticated()
                 )
 

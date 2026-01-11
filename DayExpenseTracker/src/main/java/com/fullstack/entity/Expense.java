@@ -27,6 +27,8 @@ public class Expense {
 
     private LocalDate expenseDate;
 
+    private Boolean isDeleted = false;
+
     @ManyToOne
     @JoinColumn(name = "category_id")
     private Category category;

@@ -2,15 +2,13 @@ package com.fullstack.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
-@Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class CategoryResponse {
+public class CategoryResp {
 
     @Schema(description = "Unique category ID", example = "11")
     private Long id;
@@ -20,13 +18,4 @@ public class CategoryResponse {
 
     @Schema(description = "Optional description of the category", example = "Devices and gadgets")
     private String description;
-
-    @Schema(description = "ID of the user who owns the category", example = "101")
-    private Long userID;
-
-    @Schema(description = "Name of the user who owns the category", example = "Shubham Mankar")
-    private String userName;
-
-    @Schema(description = "Email of the user who owns the category", example = "shubham@example.com")
-    private String userEmail;
 }

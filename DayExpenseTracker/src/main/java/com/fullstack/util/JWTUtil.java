@@ -7,6 +7,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
@@ -58,9 +59,13 @@ public class JWTUtil {
     }
 
     //For generating token
-    public String generateToken(String userEmail) {
+    public String generateToken(UserDetails userDetails) {
+
         Map<String, Object> claims = new HashMap<>();
-        return createToken(claims, userEmail);
+
+        claims.put("role", userDetails.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList());
+
+        return createToken(claims, userDetails.getUsername());
     }
 
     private String createToken(Map<String, Object> claims, String subject) {

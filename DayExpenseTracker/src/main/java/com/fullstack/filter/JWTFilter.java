@@ -1,4 +1,3 @@
-
 package com.fullstack.filter;
 
 import com.fullstack.util.JWTUtil;
@@ -27,54 +26,78 @@ import java.io.IOException;
 public class JWTFilter extends OncePerRequestFilter {
 
     @Autowired
-    JWTUtil jwtUtil;
+    private JWTUtil jwtUtil;
 
     @Autowired
     private UserDetailsService userDetailsService;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        String authHeader = request.getHeader("Authorization");
-        String token = null;
-        String userEmail = null;
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain
+    ) throws ServletException, IOException {
 
-        //Checking and Format
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            token = authHeader.substring(7);
-            try {
-                userEmail = jwtUtil.extractUsername(token);
-            } catch (IllegalArgumentException e) {
-                log.warn("Unable to get JWT token", e.getCause());
-                response.sendError(HttpStatus.BAD_REQUEST.value(), "Unable to get JWT token");
-            } catch (ExpiredJwtException e) {
-                log.warn("JWT Token Has Expired", e.getCause());
-                response.sendError(HttpStatus.BAD_REQUEST.value(), "JWT Token Has Expired");
-            } catch (MalformedJwtException e) {
-                log.warn("Invalid JWT Token", e.getCause());
-                response.sendError(HttpStatus.BAD_REQUEST.value(), "Invalid JWT Token");
-            } catch (SignatureException e) {
-                log.warn("JWT signature does not match locally computed signature", e.getCause());
-                response.sendError(HttpStatus.BAD_REQUEST.value(), "Invalid JWT signature");
-            } catch (Exception e) {
-                log.warn("Server Error", e.getCause());
-                e.printStackTrace();
-                response.sendError(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Internal Server Error");
-            }
+        String authHeader = request.getHeader("Authorization");
+
+        log.info("JWTFilter executed for URI: {}", request.getRequestURI());
+        log.info("Authorization Header: {}", authHeader);
+
+        // ✅ 1. If no Authorization header → PUBLIC request → continue
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response);
+            return;
         }
 
-        //Security
-        if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
+        String token = authHeader.substring(7);
+        String userEmail;
+
+        try {
+            // ✅ 2. Extract username from token
+            userEmail = jwtUtil.extractUsername(token);
+        } catch (ExpiredJwtException e) {
+            log.warn("JWT Token expired");
+            response.sendError(HttpStatus.UNAUTHORIZED.value(), "JWT Token expired");
+            return;
+        } catch (MalformedJwtException | SignatureException e) {
+            log.warn("Invalid JWT Token");
+            response.sendError(HttpStatus.UNAUTHORIZED.value(), "Invalid JWT Token");
+            return;
+        } catch (Exception e) {
+            log.error("JWT processing error", e);
+            response.sendError(HttpStatus.INTERNAL_SERVER_ERROR.value(), "JWT processing error");
+            return;
+        }
+
+        // ✅ 3. Authenticate user if not already authenticated
+        if (SecurityContextHolder.getContext().getAuthentication() == null) {
+
+            UserDetails userDetails =
+                    userDetailsService.loadUserByUsername(userEmail);
 
             if (jwtUtil.validateToken(token, userDetails)) {
-                UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(userDetails, "", userDetails.getAuthorities());
-                usernamePasswordAuthenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
+
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(
+                                userDetails,
+                                null,
+                                userDetails.getAuthorities()
+                        );
+
+                authentication.setDetails(
+                        new WebAuthenticationDetailsSource().buildDetails(request)
+                );
+
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+
+                log.info("JWT validated successfully for user: {}", userEmail);
             } else {
-                log.warn("Invalid JWT Token");
-                response.sendError(HttpStatus.BAD_REQUEST.value(), "Invalid JWT Token");
+                log.warn("JWT validation failed");
+                response.sendError(HttpStatus.UNAUTHORIZED.value(), "Invalid JWT Token");
+                return;
             }
         }
+
         filterChain.doFilter(request, response);
     }
 }

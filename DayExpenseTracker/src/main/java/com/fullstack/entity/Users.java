@@ -26,6 +26,10 @@ public class Users {
 
     private String password;
 
-    @Enumerated(EnumType.STRING)     // ⭐ store as "USER" or "ADMIN"
+    @Enumerated(EnumType.STRING)
     private Role role;
+
+    public boolean isAdmin() {
+        return this.role == Role.ADMIN;
+    }
 }

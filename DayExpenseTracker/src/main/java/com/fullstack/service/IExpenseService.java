@@ -1,6 +1,7 @@
 package com.fullstack.service;
 
 import com.fullstack.dto.*;
+import com.fullstack.entity.Users;
 
 import java.util.List;
 
@@ -29,4 +30,6 @@ public interface IExpenseService {
     List<MonthlyExpenseTrend> getMonthlyTrend();
 
     List<MonthlyTrendReport> getMonthlyTrendReport(boolean includeCategory);
+
+    void softDeleteExpense(Long expenseId);
 }

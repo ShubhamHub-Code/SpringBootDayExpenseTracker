@@ -17,7 +17,7 @@ public interface UserService {
 
     List<Users> findAll();
 
-    Users Update(long userID, UserRequest request);
+    UserResponse Update(long userID, UserRequest request);
 
 
 

@@ -4,15 +4,13 @@ import com.fullstack.dto.*;
 import com.fullstack.entity.Category;
 import com.fullstack.entity.Expense;
 import com.fullstack.entity.Users;
-import com.fullstack.exception.InvalidRequestException;
-import com.fullstack.exception.ResourceNotFoundException;
-import com.fullstack.exception.UnauthorizedActionException;
-import com.fullstack.exception.UserNotFoundException;
+import com.fullstack.exception.*;
 import com.fullstack.repository.CategoryRepository;
 import com.fullstack.repository.ExpenseRepository;
 import com.fullstack.repository.UserRepository;
 import com.fullstack.service.IExpenseService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -26,6 +24,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ExpenseServiceImpl implements IExpenseService {
 
     private final ExpenseRepository expenseRepository;
@@ -40,38 +39,35 @@ public class ExpenseServiceImpl implements IExpenseService {
     @Override
     public ExpenseResponse addExpense(ExpenseRequest expenseRequest) {
 
-        if (expenseRequest == null) {
-            throw new InvalidRequestException("Request is null");
-        }
+        log.info("Try to add new Expenses {}",expenseRequest.getTitle());
 
         if (expenseRequest.getTitle() == null) {
+            log.info("Title not present in expense request");
             throw new InvalidRequestException("Title Not present In Request");
         }
 
         if (expenseRequest.getAmount() <= 0) {
+            log.info("Received 0 amount in request");
             throw new InvalidRequestException("Amount is negative or zero");
         }
 
-        Expense expense = new Expense();
+        long userId = categoryService.getLoggedInUserId();
 
+        Users user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+        log.info("current login user is {}",user.getName());
+        Category category = categoryRepository.findByNameIgnoreCaseAndUsers_Id(expenseRequest.getCategoryName(),userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
+
+        Expense expense = new Expense();
         expense.setExpenseTitle(expenseRequest.getTitle());
         expense.setExpenseAmount(expenseRequest.getAmount());
         expense.setExpenseDate(LocalDate.now());
-        Category category = categoryRepository.findByName(expenseRequest.getCategoryName())
-                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
-
         expense.setCategory(category);
-
-        Long userId = categoryService.getLoggedInUserId();
-        Users user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("User not found"));
-
-        if (user == null) {
-            throw new UserNotFoundException("User not found");
-        }
 
         expense.setUser(user);
 
+        log.info("expense added for {} user and {} category",user.getName(),category.getName());
         Expense saved = expenseRepository.save(expense);
 
         ExpenseResponse expenseResponse = new ExpenseResponse();
@@ -89,11 +85,17 @@ public class ExpenseServiceImpl implements IExpenseService {
     public List<ExpenseResponse> addExpenses( List<ExpenseRequest> expenseRequests) {
 
         if (expenseRequests == null || expenseRequests.isEmpty()) {
+            log.info("Expense request is null");
             throw new InvalidRequestException("Request list is empty or null");
         }
 
         List<Expense> expensesToSave = new ArrayList<>();
         List<ExpenseResponse> responses = new ArrayList<>();
+
+        Long userId = categoryService.getLoggedInUserId();
+        Users user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+        log.info("current login user is {}",user.getName());
 
 
         for (ExpenseRequest request : expenseRequests) {
@@ -113,20 +115,12 @@ public class ExpenseServiceImpl implements IExpenseService {
             expense.setExpenseAmount(request.getAmount());
             expense.setExpenseDate(LocalDate.now());
 
-            Category category = categoryRepository.findByName(request.getCategoryName())
+            Category category = categoryRepository.findByNameIgnoreCaseAndUsers_Id(request.getCategoryName(),userId)
                     .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
+
+            log.info("expense added for {} user and {} category",user.getName(),category.getName());
             expense.setCategory(category);
-
-            Long userId = categoryService.getLoggedInUserId();
-            Users user = userRepository.findById(userId)
-                    .orElseThrow(() -> new UserNotFoundException("User not found"));
-
-            if (user == null) {
-                throw new UserNotFoundException("User not found");
-            }
-
             expense.setUser(user);
-
             expensesToSave.add(expense);
         }
 
@@ -171,6 +165,7 @@ public class ExpenseServiceImpl implements IExpenseService {
     @Override
     public PaginatedExpenseResponse viewAllUserExpense(int page, int size, String sortBy) {
 
+        log.info("Received request for get user expense");
         Long userId = categoryService.getLoggedInUserId();
         Users user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
@@ -217,7 +212,7 @@ public class ExpenseServiceImpl implements IExpenseService {
         expense.setExpenseDate(expenseRequest.getDate());
 
 
-        Category category = categoryRepository.findByName(expenseRequest.getCategoryName()).orElseThrow(() -> new ResourceNotFoundException("Category not found"));
+        Category category = categoryRepository.findByNameIgnoreCaseAndUsers_Id(expenseRequest.getCategoryName(),userId).orElseThrow(() -> new ResourceNotFoundException("Category not found"));
         expense.setCategory(category);
 
         Expense saved = expenseRepository.save(expense);
@@ -227,7 +222,7 @@ public class ExpenseServiceImpl implements IExpenseService {
         response.setAmount(saved.getExpenseAmount());
         response.setCategoryName(category.getName());
         response.setDate(java.sql.Date.valueOf(saved.getExpenseDate()));
-        response.setMassage("Expense updated successfully");
+        //response.setMassage("Expense updated successfully");
 
         return response;
 
@@ -278,10 +273,6 @@ public class ExpenseServiceImpl implements IExpenseService {
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
 
-        if (user == null) {
-            throw new UserNotFoundException("User not found");
-        }
-
         return expenseRepository.getCategoryWiseSpending(user.getId());
     }
 
@@ -322,6 +313,25 @@ public class ExpenseServiceImpl implements IExpenseService {
         }
 
         return reports;
+    }
+
+    @Override
+    public void softDeleteExpense(Long expenseId) {
+        long userId = categoryService.getLoggedInUserId();
+        Expense expense = expenseRepository.findById(expenseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Expense not found"));
+
+        Users currentUser = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        Users owner = expense.getUser();
+
+        if (owner == null || (!owner.getId().equals(currentUser.getId()) && !currentUser.isAdmin())) {
+            throw new UnauthorizedException("Not allowed to delete this expense");
+        }
+
+        expense.setIsDeleted(true);
+        expenseRepository.save(expense);
     }
 
 
